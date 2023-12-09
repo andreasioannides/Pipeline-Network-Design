@@ -11,4 +11,6 @@ The task is to select suitable diameters for the pipes of the network. Standard 
 
 2) Calculate the variation in operating pressure at the network nodes during the day. Values of daily flow variation are provided in Figures/Table 2.
 
-The attributes of the pipelines are specified in the params.json .
+The attributes of the pipelines are specified in the "params.json".
+
+Inside "network_data.xlsx", there are two sheets. In the "Nodes" sheet, I have specified the coordinates, initial pressure values, and consumption for each node. The initial pressures are random values (except for the first one, which serves as a boundary condition for our problem) and will be updated using the iterative Newton-Raphson algorithm to meet the requirements of the problem. Similarly, in the "Edges" sheet, I have specified the nodes of each pipeline and its length.
