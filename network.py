@@ -50,83 +50,87 @@ class createNetwork:
         Array with all edges of the network. 
 
         Each edge has 8 columns:
-        0: node A
-        1: node B
-        2: lenght
-        3: diameter
+        0: index of node A
+        1: index of node B
+        2: L (lenght)
+        3: D (diameter)
         4: epsilon (roughness)
         5: dP (pressure difference)
-        6: k: coefficient of linear losses
+        6: k (coefficient of linear losses)
         7: Q (supply)
         '''
 
-        self.connectedEdges = self.init_connectedEdges()  # the connected edges for each node are added to the list when createNetwork.edgeAttributes() function is called. This is done for time optimazation.
+        self.edgeAttributes(init=True)  
+        self.connectedEdges = self.get_connected_edges()
         '''Array with the connected edges for each node.'''
-        self.edgeAttributes()  
-        
-    def init_connectedEdges(self) -> list:
-        '''Create an empty list with number of rows equal to the number of nodes and a varying number of columns.'''
 
-        init_con = []  
-        
-        for i in range(len(self.nodesList)):
-            init_con.append([])
-
-        return init_con
-
-    def edgeAttributes(self):
+    def edgeAttributes(self, init: bool):
         '''Calculate the attributes of the network's edges.'''
 
-        self.edgesList[:, 4] = params["epsilon"]
-        self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
+        if (init):
+            self.edgesList[:, 4] = params["epsilon"]
+            self.edgesList[:, 3] = params["D"]
+            self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
+
+        nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float
+        nodeB_idx = np.int32(self.edgesList[:, 1])
+        self.edgesList[:, 5] = self.nodesList[nodeA_idx, 2] - self.nodesList[nodeB_idx, 2]  # dP = P_A - P_B
+        self.edgesList[:, 6] = self.k_coefficient()
+        self.edgesList[:, 7] = self.supply()
+
+    def get_connected_edges(self) -> list:
+        '''Create an array with the connected edges for each node.'''
+
+        con = []  
+        
+        for i in range(len(self.nodesList)):
+            con.append([])
 
         for i, edge in enumerate(self.edgesList):
-            edge[3] = params["D"]
-            nodeA_idx = int(edge[0])  # data type casting beacuse the type of nodesList array is float
+            nodeA_idx = int(edge[0]) 
             nodeB_idx = int(edge[1])
-            edge[5] = self.nodesList[nodeA_idx, 2] - self.nodesList[nodeB_idx, 2]  # dP = P_A - P_B 
-            edge[6] = self.k_coefficient(edge[4], edge[3], edge[2])
-            edge[7] = self.supply(edge[5], edge[6])
+            con[nodeA_idx].append(i)
+            con[nodeB_idx].append(i)
 
-            # add the edge to the connectedEdges list of the respective nodes
-            self.connectedEdges[nodeA_idx].append(i)
-            self.connectedEdges[nodeB_idx].append(i)
+        return con
     
-    def k_coefficient(self, epsilon: float, D: float, L: float) -> float:
+    def k_coefficient(self) -> np.ndarray:
         '''Calculate the k coefficient of an edge.'''
 
         Re = 1.0e10  # Reynolds: initial value set to infinite
-        # lambda_ = pow(1 / (1.14 - 2*log10(self.epsilon/self.D + 21.25/Re**0.9)), 2)
-        lambda_ = pow(1 / (1.14 - 2*log10(epsilon/D)), 2)
-        k = lambda_ * (L/D) * 8 / (pi**2 * 9.81 * D**4)
+        edges = self.edgesList
+        lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
+        k = lambda_ * (edges[:, 2]/edges[:, 3] * 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)))
 
         return k
     
-    # def k_coefficient(self) -> float:
+    # def k_coefficient(self) -> np.ndarray:
     #     '''Calculate the k coefficient of the edge.'''
 
     #     Re = 1.0e10  # Reynolds: initial value set to infinite
-    #     k_old = 5  # random initial value
+    #     k_old = 0  # random initial value
+    #     edges = self.edgesList
 
     #     while True:
-    #         lambda_ = pow(1 / (1.14 - 2*log10(self.epsilon/self.D + 21.25/Re**0.9)), 2)
-    #         k = lambda_ * (self.L/self.D) * 8 / (pi**2 * 9.81 * self.D**4)
-    #         Q = abs(self.supply(k))
-    #         U = 4*Q / (pi*self.D**2)  # velosity
-    #         Re = (U*self.D) / params["viscosity"]
+    #         lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
+    #         k = lambda_ * (edges[:, 2]/edges[:, 3] * 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)))
+    #         Q = self.supply()
+    #         U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
+    #         Re = U * edges[:, 3] / params["viscosity"]
 
-    #         if (abs((k - k_old)/k) <= 1.0e-7):  # check if converged
+    #         if (np.all(np.abs((k - k_old)/k) <= 1.0e-7)):  # check if the loop has converged
     #             break
 
     #         k_old = k
-    #         # print(str(i) + ": " + str(k_old))
 
     #     return k
 
-    def supply(self, dP: float, k: float) -> float:
+    def supply(self) -> np.ndarray:
         '''Calculate the supply Q of an edge.'''
 
-        return sqrt(abs(dP) / k)
+        edges = self.edgesList
+
+        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * params["density"]))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
     
     def sign_Q(self, edge_idx: int, ref_node_idx: int) -> float:
         '''
@@ -139,9 +143,9 @@ class createNetwork:
         '''
 
         sign = 1
-        if (ref_node_idx == self.edgesList[edge_idx, 0] and self.edgesList[edge_idx, 5] > 0):  # check if ref_node is equal with the nodeA
+        if (ref_node_idx == int(self.edgesList[edge_idx, 0]) and self.edgesList[edge_idx, 5] > 0):  # check if ref_node is equal with the nodeA
             sign = -1
-        elif (ref_node_idx == self.edgesList[edge_idx, 1] and self.edgesList[edge_idx, 5] < 0):  # check if ref_node is equal with the nodeB
+        elif (ref_node_idx == int(self.edgesList[edge_idx, 1]) and self.edgesList[edge_idx, 5] < 0):  # check if ref_node is equal with the nodeB
             sign = -1     
         
         return sign * self.edgesList[edge_idx, 7]
