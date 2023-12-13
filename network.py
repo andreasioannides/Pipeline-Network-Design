@@ -91,7 +91,8 @@ class createNetwork:
 
         if (init):
             self.edgesList[:, 4] = self.params["B2"].value
-            self.edgesList[:, 3] = sqrt((4*self.nodesList[0, 3]) / (3.5*pi))  # calculate the initial diameter of the pipelines using d=sqrt(4Q/(U*π)) whereU=3.5 m/s and Q is the supply in the first node
+            self.edgesList[:, 3] = sqrt((4*self.nodesList[0, 3]) / (4*pi))  # calculate the initial diameter of the pipelines using d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply in the first node
+            # self.edgesList[:, 3] = 0.3
             self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
 
         nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float

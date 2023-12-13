@@ -15,16 +15,18 @@ def iterations(network: object, params: object, iter: int):
             break
         
         j += 1
-
         if (j == iter):
-            # print(network.edgesList[:, 5])
             iter_1(network)
             break
-        #     elif (iter == 2):
+        elif (iter == 2):
+            iter_2(network)
+            break
                         
         dP_old = dP
 
-    print(network.nodesList[:, 2])  
+    if (iter == None):
+        print("\nPressures: ")
+        print(network.nodesList[:, 2])  
 
 def correct_pressures(network: object, params: object) -> np.ndarray:
     '''Correct the pressures of the nodes.'''
@@ -57,20 +59,29 @@ def correct_pressures(network: object, params: object) -> np.ndarray:
     dP = np.linalg.solve(J, -F)  # J*dP + F = 0 -> J*dP = -F
     dP = np.squeeze(dP)
     network.nodesList[:, 2] += dP
-    network.edgeAttributes(init=False)
+    network.edgeAttributes(init=False)  # update the attributes of the pipelines with the new P
 
     return dP
 
 def iter_1(network):
-    '''Iteration 1: check the direction of each edge's supply.'''
+    '''Iteration 1: check the direction of the supply for each edge.'''
 
     edges = network.edgesList
 
     for edge in edges:
         if (edge[5] > 0):  # dP>0 -> Q: nodeA -> nodeB
-            print(f"\nEdge {int(edge[0])}-{int(edge[1])}: +{edge[7]}")
-        else:  # dP<0 -> Q: nodeB -> nodeA
-            print(f"Edge {int(edge[0])}-{int(edge[1])}: -{edge[7]}")
+            print(f"\nEdge {int(edge[0])}-{int(edge[1])}: Q=+{edge[7]}")
+        else:              # dP<0 -> Q: nodeB -> nodeA
+            print(f"Edge {int(edge[0])}-{int(edge[1])}: Q=-{edge[7]}")
+
+def iter_2(network):
+    '''Selection of standardized diameters.'''
+
+    edges = network.edgesList
+    d = np.sqrt((4*edges[:, 7]) / (4*pi))  # d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply
+    
+    for i, edge in enumerate(edges):
+        print(f"Edge {int(edge[0])}-{int(edge[1])}: D={d[i]}")
 
 def main():
     path = "network_data.xlsx"
@@ -82,13 +93,19 @@ def main():
     # net.plotNetwork()
     
     iterations(net, params, 1)  # check the direction of each edge's supply
-    print(f"\nOpen file: '{path}', sheet'Edges' sheet and update the values of ζ.") 
+    print(f"\nOpen file '{path}', sheet'Edges' sheet and update the values of ζ.") 
     next = input(f"Type [yes] and click enter if you updated the values of ζ: ")
+    print("")
 
     if (next == "yes"):
         net.update_zeta(path)  # define the values of ζ for each node
-        # iterations(net, params, 2)  # 
-        # iterations(net, params, None)
+        iterations(net, params, 2)  
+    
+    next = input(f"\nType [yes] and click enter if you have selected the standardized diameters: ")
+
+    if (next == "yes"):
+        net.edgesList[:, 3] = load_data(path, "Edges")[:, 4]  # update diameters
+        iterations(net, params, None)
 
 if __name__ == '__main__':
     main()
