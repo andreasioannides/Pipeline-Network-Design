@@ -1,7 +1,0 @@
-{
-    "D" : 0.300,
-    "epsilon" : 0.00001,
-    "viscosity" : 0.00001357,
-    "density" : 0.79,
-    "boundary_conditions_nodes" : [1]
-}
