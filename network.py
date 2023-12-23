@@ -33,6 +33,8 @@ class createNetwork:
     -------
     sign_Q(edge_idx, ref_node_idx)
         Get the supply of an edge with the right sign given the reference node.
+    update_zeta(path)
+        Update the values of ζ for each edge. This function is used in the second iteration, when we know the direction of the Q of the edges.
     neighborNodes(node_idx)
         Get a list with the indexes of the neighbor nodes of a given node.
     plotNetwork()
@@ -67,7 +69,7 @@ class createNetwork:
         5: dP (pressure difference)
         6: k (coefficient of linear losses)
         7: Q (supply)
-        8: ζ (localized losses in the first node of the pipeline)
+        8: ζ (localized losses in the first node of each edge)
         '''
 
         self.params = params
@@ -77,7 +79,7 @@ class createNetwork:
         Default excel file:
         column A: D (diameter)
         column B: epsilon (roughness)
-        column C: viscosity
+        column C: kinematic viscosity
         column D: density
         column E: list with the indexes of nodes with boundary conditions
         '''
@@ -87,12 +89,12 @@ class createNetwork:
         '''Array with the connected edges for each node.'''
 
     def edgeAttributes(self, init: bool):
-        '''Calculate the attributes of the network's edges.'''
+        '''Calculate the attributes (empty columns) of the network's edges.'''
 
         if (init):
             self.edgesList[:, 4] = self.params["B2"].value
             self.edgesList[:, 3] = sqrt((4*self.nodesList[0, 3]) / (4*pi))  # calculate the initial diameter of the pipelines using d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply in the first node
-            # self.edgesList[:, 3] = 0.3
+            # self.edgesList[:, 3] = self.params["A2"].value
             self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
 
         nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float
@@ -117,41 +119,41 @@ class createNetwork:
 
         return con
     
-    def k_coefficient(self) -> np.ndarray:
-        '''Calculate the k coefficient of an edge.'''
-
-        Re = 1.0e10  # Reynolds: initial value set to infinite
-        edges = self.edgesList
-        lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
-        c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
-        k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c  # λ(L/D)*8/(π^2*g*D^4) + ζ*8/(π^2*g*D^4)
-
-        return k
-    
     # def k_coefficient(self) -> np.ndarray:
-    #     '''Calculate the k coefficient of the edge.'''
+    #     '''Calculate the k coefficient of an edge.'''
 
     #     Re = 1.0e10  # Reynolds: initial value set to infinite
-    #     k_old = 0  # random initial value
     #     edges = self.edgesList
-
-    #     while True:
-    #         lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
-    #         c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
-    #         k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
-    #         Q = self.supply()
-    #         U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
-    #         Re = U * edges[:, 3] / self.params["C2"].value
-
-    #         if (np.all(np.abs((k - k_old)/k) <= 1.0e-7)):  # check if the loop has converged
-    #             break
-
-    #         k_old = k
+    #     lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
+    #     c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
+    #     k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c  # λ(L/D)*8/(π^2*g*D^4) + ζ*8/(π^2*g*D^4)
 
     #     return k
+    
+    def k_coefficient(self) -> np.ndarray:
+        '''Calculate the k coefficient of the edge.'''
+
+        Re = 1.0e10  # Reynolds: initial value set to infinite
+        k_old = 0  # random initial value
+        edges = self.edgesList
+
+        while True:
+            lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
+            c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
+            k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
+            Q = self.supply()
+            U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
+            Re = U * edges[:, 3] / self.params["C2"].value
+
+            if (np.all(np.abs((k - k_old)/k) <= 1.0e-7)):  # check if the loop has converged
+                break
+
+            k_old = k
+
+        return k
 
     def supply(self) -> np.ndarray:
-        '''Calculate the supply Q of an edge.'''
+        '''Calculate the supply Q of an edge. The direction of the supply is not considered.'''
 
         edges = self.edgesList
 
@@ -159,7 +161,7 @@ class createNetwork:
     
     def sign_Q(self, edge_idx: int, ref_node_idx: int) -> float:
         '''
-        Get the supply of an edge with the right sign given the reference node.
+        Calculate the supply Q of an edge. The direction of the supply is considered.
         
         Parameters
         ----------
@@ -182,13 +184,7 @@ class createNetwork:
         self.edgesList[:, 8] = new_zeta
     
     def neighborNodes(self, node_idx: int) -> list:
-        '''
-        Get a list with the indexes of the neighbor nodes of a given node.
-        
-        Parameters
-        ----------
-        node : index of the node to find its neighbors
-        '''
+        '''Get a list with the indexes of the neighbor nodes of a given node.'''
 
         neigh_nodes = []
 
@@ -200,7 +196,7 @@ class createNetwork:
 
         return neigh_nodes
 
-    def plotNetwork(self):
+    def plotNetwork(self, plot_arrows=bool):
         '''Plot the pipeline network.'''
 
         for i, node in enumerate(self.nodesList):
@@ -214,6 +210,16 @@ class createNetwork:
                 nodeA = self.nodesList[nodeA_idx]
                 nodeB = self.nodesList[nodeB_idx]
                 plt.plot([nodeA[0], nodeB[0]], [nodeA[1], nodeB[1]])
+
+                # if (plot_arrows):
+                #     if (nodeA[0] == nodeB[0]):  # vertical edge
+                #         dx = 0
+                #         dy = nodeB[1] - nodeA[1] - 30
+                #         plt.arrow(nodeA[0] - 5, nodeA[1] + 10, dx, dy, head_width=0.1, head_length=0.1, fc='black', ec='black')
+                #     else:  # horizontal edge
+                #         dx = nodeB[0] - nodeA[0] - 30
+                #         dy = 0
+                #         plt.arrow(nodeA[0] + 15, nodeA[1] + 5, dx, dy, head_width=0.1, head_length=0.1, fc='black', ec='black')                    
 
         plt.xlabel("x")
         plt.ylabel("y")
