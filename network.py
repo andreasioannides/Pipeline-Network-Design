@@ -33,11 +33,9 @@ class createNetwork:
     -------
     sign_Q(edge_idx, ref_node_idx)
         Get the supply of an edge with the right sign given the reference node.
-    update_zeta(path)
-        Update the values of ζ for each edge. This function is used in the second iteration, when we know the direction of the Q of the edges.
     neighborNodes(node_idx)
         Get a list with the indexes of the neighbor nodes of a given node.
-    plotNetwork()
+    plotNetwork(plot_Q)
         Plot the pipeline network.
     '''
 
@@ -92,9 +90,8 @@ class createNetwork:
         '''Calculate the attributes (empty columns) of the network's edges.'''
 
         if (init):
-            self.edgesList[:, 4] = self.params["B2"].value
+            self.edgesList[:, 4] = self.params["A2"].value
             self.edgesList[:, 3] = sqrt((4*self.nodesList[0, 3]) / (4*pi))  # calculate the initial diameter of the pipelines using d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply in the first node
-            # self.edgesList[:, 3] = self.params["A2"].value
             self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
 
         nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float
@@ -143,7 +140,7 @@ class createNetwork:
             k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
             Q = self.supply()
             U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
-            Re = U * edges[:, 3] / self.params["C2"].value
+            Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
 
             if (np.all(np.abs((k - k_old)/k) <= 1.0e-7)):  # check if the loop has converged
                 break
@@ -157,7 +154,7 @@ class createNetwork:
 
         edges = self.edgesList
 
-        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["D2"].value))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
+        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["C2"].value))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
     
     def sign_Q(self, edge_idx: int, ref_node_idx: int) -> float:
         '''
@@ -177,12 +174,6 @@ class createNetwork:
         
         return sign * self.edgesList[edge_idx, 7]
     
-    def update_zeta(self, path: str):
-        '''Update the values of ζ for each edge. This function is used in the second iteration, when we know the direction of the Q of the edges.'''
-
-        new_zeta = load_data(path, "Edges")[:, 3]
-        self.edgesList[:, 8] = new_zeta
-    
     def neighborNodes(self, node_idx: int) -> list:
         '''Get a list with the indexes of the neighbor nodes of a given node.'''
 
@@ -196,7 +187,7 @@ class createNetwork:
 
         return neigh_nodes
 
-    def plotNetwork(self, plot_arrows=bool):
+    def plotNetwork(self):
         '''Plot the pipeline network.'''
 
         for i, node in enumerate(self.nodesList):
@@ -209,20 +200,23 @@ class createNetwork:
                 nodeB_idx = int(edge[1])
                 nodeA = self.nodesList[nodeA_idx]
                 nodeB = self.nodesList[nodeB_idx]
-                plt.plot([nodeA[0], nodeB[0]], [nodeA[1], nodeB[1]])
+                plt.plot([nodeA[0], nodeB[0]], [nodeA[1], nodeB[1]])                   
 
-                # if (plot_arrows):
-                #     if (nodeA[0] == nodeB[0]):  # vertical edge
-                #         dx = 0
-                #         dy = nodeB[1] - nodeA[1] - 30
-                #         plt.arrow(nodeA[0] - 5, nodeA[1] + 10, dx, dy, head_width=0.1, head_length=0.1, fc='black', ec='black')
-                #     else:  # horizontal edge
-                #         dx = nodeB[0] - nodeA[0] - 30
-                #         dy = 0
-                #         plt.arrow(nodeA[0] + 15, nodeA[1] + 5, dx, dy, head_width=0.1, head_length=0.1, fc='black', ec='black')                    
-
-        plt.xlabel("x")
-        plt.ylabel("y")
+        plt.xlabel("x [m]")
+        plt.ylabel("y [m]")
         plt.title("Pipeline Network")
-        plt.legend()
         plt.show()
+
+    def plot_P(self, pressures: np.ndarray, t: int):
+        '''Plot showing the pressure at each node.'''
+
+        for i in range(len(self.nodesList)):
+            plt.scatter(x=i+1, y=pressures[i], color='red')
+        
+        for i in range(1, len(self.nodesList)):
+            plt.plot([i+1, i], [pressures[i], pressures[i-1]], color='red')
+            
+        plt.xlabel("Node")
+        plt.ylabel("Pressure [Pa]")
+        plt.title(f"Time: {t}")
+        plt.show()  
