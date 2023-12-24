@@ -112,7 +112,7 @@ def main():
     '''Define the values of ζ for each node.'''
     p = correct_pressures(net, params, 1)  # check the direction of each edge's supply
 
-    print(f"\nOpen file '{path}', sheet'Edges' sheet and update the values of ζ.") 
+    print(f"\nOpen file '{path}', 'Edges' sheet and update the values of ζ.") 
     next = input(f"Type [yes] and click enter if you updated the values of ζ: ")
     print("")
 

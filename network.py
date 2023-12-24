@@ -97,7 +97,7 @@ class createNetwork:
         nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float
         nodeB_idx = np.int32(self.edgesList[:, 1])
         self.edgesList[:, 5] = self.nodesList[nodeA_idx, 2] - self.nodesList[nodeB_idx, 2]  # dP = P_A - P_B
-        self.edgesList[:, 6] = self.k_coefficient()
+        self.edgesList[:, 6] = self.k_coefficient(init)
         self.edgesList[:, 7] = self.supply()
 
     def get_connected_edges(self) -> list:
@@ -116,36 +116,20 @@ class createNetwork:
 
         return con
     
-    # def k_coefficient(self) -> np.ndarray:
-    #     '''Calculate the k coefficient of an edge.'''
-
-    #     Re = 1.0e10  # Reynolds: initial value set to infinite
-    #     edges = self.edgesList
-    #     lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
-    #     c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
-    #     k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c  # λ(L/D)*8/(π^2*g*D^4) + ζ*8/(π^2*g*D^4)
-
-    #     return k
-    
-    def k_coefficient(self) -> np.ndarray:
+    def k_coefficient(self, init: bool) -> np.ndarray:
         '''Calculate the k coefficient of the edge.'''
 
-        Re = 1.0e10  # Reynolds: initial value set to infinite
-        k_old = 0  # random initial value
+        Re = 1.0e10  # initial Reynolds value set to infinite
         edges = self.edgesList
 
-        while True:
-            lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4]/edges[:, 3] + 21.25/Re**0.9)), 2)  # Jain equation
-            c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
-            k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
+        if (init == False):
             Q = self.supply()
             U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
             Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
-
-            if (np.all(np.abs((k - k_old)/k) <= 1.0e-7)):  # check if the loop has converged
-                break
-
-            k_old = k
+      
+        lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4] / edges[:, 3] + 21.25 / Re**0.9)), 2)  # Jain equation
+        c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
+        k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
 
         return k
 
