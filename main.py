@@ -4,11 +4,12 @@ import openpyxl as xl
 from math import sqrt, pi
 
 def correct_pressures(network: object, params: object, iter: int) -> np.ndarray:
-    '''Correct the Pressures of the nodes. Number of iterations is equal to the "iter" parameter.'''
-    dP_old = 0
+    '''Correct the Pressures of the nodes.'''
 
+    dP_old = 0
+    
     while True:
-        dP = correction_factor(network, params)    
+        dP = correction_factor(network, params)  
 
         if (np.all(np.abs(dP - dP_old) <= 1.0e-10)):  # check if the loop has converged
             break
@@ -60,7 +61,7 @@ def correction_factor(network: object, params: object) -> np.ndarray:
     return dP
 
 def iter_1(network: object):
-    '''Iteration 1: Check the direction of the supply for each edge.'''
+    '''Iteration 1: Define the direction of the supply for each edge.'''
 
     print("")
     for i, p in enumerate(network.nodesList[:, 2]): 
@@ -106,18 +107,19 @@ def main():
     daily_demand = xl.load_workbook(path)["Daily demand"]  
     
     '''Create the pipeline network.'''
-    net = createNetwork(nodes, edges, params)
+    net = createNetwork(np.copy(nodes), np.copy(edges), params)  # use np.copy to avoid modifying the original array. Arrays are passed by reference inside functions
     # net.plotNetwork()
     
     '''Define the values of ζ for each node.'''
     p = correct_pressures(net, params, 1)  # check the direction of each edge's supply
-
+    
     print(f"\nOpen file '{path}', 'Edges' sheet and update the values of ζ.") 
     next = input(f"Type [yes] and click enter if you updated the values of ζ: ")
     print("")
 
     if (next == "yes"):
-        net.nodesList = nodes
+        net.nodesList = np.copy(nodes)
+        
         net.edgesList[:, 8] = load_data(path, "Edges")[:, 3]  # update the values of ζ for each node
         net.edgeAttributes(init=False)
         p = correct_pressures(net, params, 2)  
@@ -126,13 +128,13 @@ def main():
     next = input(f"\nType [yes] and click enter if you have selected the standardized diameters: ")
 
     if (next == "yes"):
-        net.nodesList = nodes
+        net.nodesList = np.copy(nodes)
         net.edgesList[:, 3] = load_data(path, "Edges")[:, 4]  # update diameters
         net.edgeAttributes(init=False)
         p = correct_pressures(net, params, 3)
 
     '''Calculate the pressures of the nodes during the day.'''
-    # daily(net, nodes, params, daily_demand)
+    # daily(net, np.copy(nodes), params, daily_demand)
 
 if __name__ == '__main__':
     main()

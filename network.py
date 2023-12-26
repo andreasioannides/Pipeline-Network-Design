@@ -94,12 +94,36 @@ class createNetwork:
             self.edgesList[:, 3] = sqrt((4*self.nodesList[0, 3]) / (4*pi))  # calculate the initial diameter of the pipelines using d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply in the first node
             self.edgesList[:, :2] -= 1  # reduce the index of the nodes by 1 for better usability with array indexing
 
-        nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting beacuse the type of nodesList array is float
+        nodeA_idx = np.int32(self.edgesList[:, 0])  # data type casting because the type of nodesList array is float
         nodeB_idx = np.int32(self.edgesList[:, 1])
         self.edgesList[:, 5] = self.nodesList[nodeA_idx, 2] - self.nodesList[nodeB_idx, 2]  # dP = P_A - P_B
         self.edgesList[:, 6] = self.k_coefficient(init)
         self.edgesList[:, 7] = self.supply()
+    
+    def k_coefficient(self, init: bool) -> np.ndarray:
+        '''Calculate the k coefficient of the edge.'''
 
+        Re = 1.0e10  # initial Reynolds value set to infinite
+        edges = self.edgesList
+
+        if (init == False):
+            Q = self.supply()
+            U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
+            Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
+      
+        lambda_ = np.power(1 / (1.14 - 2 * np.log10(edges[:, 4] / edges[:, 3] + 21.25 / Re**0.9)), 2)  # Jain equation
+        c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
+        k = lambda_ * (edges[:, 2] / edges[:, 3] * c) + edges[:, 8] * c
+
+        return k
+
+    def supply(self) -> np.ndarray:
+        '''Calculate the supply Q of an edge. The direction of the supply is not considered.'''
+
+        edges = self.edgesList
+
+        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["C2"].value))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
+    
     def get_connected_edges(self) -> list:
         '''Create an array with the connected edges for each node.'''
 
@@ -115,30 +139,6 @@ class createNetwork:
             con[nodeB_idx].append(i)
 
         return con
-    
-    def k_coefficient(self, init: bool) -> np.ndarray:
-        '''Calculate the k coefficient of the edge.'''
-
-        Re = 1.0e10  # initial Reynolds value set to infinite
-        edges = self.edgesList
-
-        if (init == False):
-            Q = self.supply()
-            U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
-            Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
-      
-        lambda_ = np.power(1 / (1.14 - 2*np.log10(edges[:, 4] / edges[:, 3] + 21.25 / Re**0.9)), 2)  # Jain equation
-        c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
-        k = lambda_ * (edges[:, 2]/edges[:, 3] * c) + edges[:, 8] * c
-
-        return k
-
-    def supply(self) -> np.ndarray:
-        '''Calculate the supply Q of an edge. The direction of the supply is not considered.'''
-
-        edges = self.edgesList
-
-        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["C2"].value))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
     
     def sign_Q(self, edge_idx: int, ref_node_idx: int) -> float:
         '''
