@@ -42,7 +42,7 @@ class createNetwork:
     def __init__(self, nodes: np.ndarray, edges: np.ndarray, params: object):
         '''Default network constructor.'''
 
-        self.nodesList = nodes 
+        self.nodesList = nodes
         '''
         Array with the all nodes of the network. 
         
@@ -110,8 +110,9 @@ class createNetwork:
             Q = self.supply()
             U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
             Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
-      
-        lambda_ = np.power(1 / (1.14 - 2 * np.log10(edges[:, 4] / edges[:, 3] + 21.25 / Re**0.9)), 2)  # Jain equation
+        
+        r = edges[:, 4] / edges[:, 3] + 21.25 / Re**0.9
+        lambda_ = np.power(1 / (1.14 - 2 * np.log10(r.astype(float))), 2)  # Jain equation
         c = 8 / (pi**2 * 9.81 * np.power(edges[:, 3], 4)) 
         k = lambda_ * (edges[:, 2] / edges[:, 3] * c) + edges[:, 8] * c
 
@@ -121,8 +122,9 @@ class createNetwork:
         '''Calculate the supply Q of an edge. The direction of the supply is not considered.'''
 
         edges = self.edgesList
+        r = np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["C2"].value)
 
-        return np.sqrt(np.abs(edges[:, 5]) / (edges[:, 6] * 9.81 * self.params["C2"].value))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
+        return np.sqrt(r.astype(float))  # To transform pressure from mΣΥ=Pa/(ρ*g) to Pa multiply the denominator with ρ*g . Q=(|dP|/(K_AB*ρ*g)^0.5
     
     def get_connected_edges(self) -> list:
         '''Create an array with the connected edges for each node.'''
@@ -200,7 +202,10 @@ class createNetwork:
         for i in range(1, len(self.nodesList)):
             plt.plot([i+1, i], [pressures[i], pressures[i-1]], color='red')
             
+        plt.axhline(y=2500, color='blue', label='Threshold')
+
         plt.xlabel("Node")
         plt.ylabel("Pressure [Pa]")
         plt.title(f"Time: {t}")
         plt.show()  
+        plt.savefig(f'time{t}.png')

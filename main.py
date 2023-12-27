@@ -71,7 +71,8 @@ def iter_2(network: object):
     '''Iteration 2: Selection of standardized diameters.'''
 
     edges = network.edgesList
-    d = np.sqrt((4*edges[:, 7]) / (4*pi))  # d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply
+    r = (4*edges[:, 7]) / (4*pi)
+    d = np.sqrt(r.astype(float))  # d=sqrt(4Q/(U*π)) where U=4 m/s and Q is the supply
     
     for i, edge in enumerate(edges):
         print(f"Edge {int(edge[0])+1}-{int(edge[1])+1}: D={d[i]}")
@@ -90,12 +91,18 @@ def daily(network: object, nodes: np.ndarray, params: object, daily_demand: obje
     daily_demand = [cell.value for cell in daily_demand['A'][1:]]
     time = np.arange(0, 24, 2)
 
+    print("\nNodes with the value of 'True' have pressures < 2500 Pa.\n")
+
     for t, demand in enumerate(daily_demand):
         network.nodesList[:, 2] = nodes[:, 2]
         network.nodesList[:, 3] = nodes[:, 3] * (demand / nodes[0, 3])
         network.edgeAttributes(init=False)
-        p_final = correct_pressures(network, params, None)
-        network.plot_P(p_final, time[t])
+        dp = correct_pressures(network, params, None)
+        network.plot_P(network.nodesList[:, 2], time[t])
+
+        print(f"\nTime {t}:")
+        print(network.nodesList[:, 2] > 2500)
+        print(4 * network.edgesList[:, 7] / (pi * np.power(network.edgesList[:, 3], 2)) < 8)
 
 def main():
 
@@ -119,11 +126,11 @@ def main():
 
     if (next == "yes"):
         net.nodesList = np.copy(nodes)
-        
         net.edgesList[:, 8] = load_data(path, "Edges")[:, 3]  # update the values of ζ for each node
         net.edgeAttributes(init=False)
         p = correct_pressures(net, params, 2)  
-    
+
+
     '''Select standardized diameters for the pipelines.'''
     next = input(f"\nType [yes] and click enter if you have selected the standardized diameters: ")
 
@@ -134,7 +141,7 @@ def main():
         p = correct_pressures(net, params, 3)
 
     '''Calculate the pressures of the nodes during the day.'''
-    # daily(net, np.copy(nodes), params, daily_demand)
+    daily(net, np.copy(nodes), params, daily_demand)
 
 if __name__ == '__main__':
     main()
