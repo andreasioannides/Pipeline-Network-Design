@@ -208,4 +208,3 @@ class createNetwork:
         plt.ylabel("Pressure [Pa]")
         plt.title(f"Time: {t}")
         plt.show()  
-        plt.savefig(f'time{t}.png')
