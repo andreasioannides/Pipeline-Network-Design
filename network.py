@@ -107,7 +107,7 @@ class createNetwork:
         edges = self.edgesList
 
         if (init == False):
-            Q = self.supply()
+            Q = self.edgesList[:, 7]  # use Q from the previous iteration
             U = 4*Q / (pi * np.power(edges[:, 3], 2))  # velosity
             Re = U * edges[:, 3] / self.params["B2"].value  # Re=(UD)/ν
         

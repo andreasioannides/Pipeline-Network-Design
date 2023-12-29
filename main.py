@@ -100,7 +100,7 @@ def daily(network: object, nodes: np.ndarray, params: object, daily_demand: obje
         dp = correct_pressures(network, params, None)
         network.plot_P(network.nodesList[:, 2], time[t])
 
-        print(f"\nTime {t}:")
+        print(f"\nTime {time[t]}:")
         print(network.nodesList[:, 2] > 2500)
         print(4 * network.edgesList[:, 7] / (pi * np.power(network.edgesList[:, 3], 2)) < 8)
 
@@ -129,7 +129,6 @@ def main():
         net.edgesList[:, 8] = load_data(path, "Edges")[:, 3]  # update the values of ζ for each node
         net.edgeAttributes(init=False)
         p = correct_pressures(net, params, 2)  
-
 
     '''Select standardized diameters for the pipelines.'''
     next = input(f"\nType [yes] and click enter if you have selected the standardized diameters: ")
