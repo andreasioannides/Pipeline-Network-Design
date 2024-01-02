@@ -193,18 +193,22 @@ class createNetwork:
         plt.title("Pipeline Network")
         plt.show()
 
-    def plot_P(self, pressures: np.ndarray, t: int):
-        '''Plot showing the pressure at each node.'''
+    def plot_P(self, pressures: np.ndarray):
+        '''Plot showing the pressure during the day at each node.'''
 
-        for i in range(len(self.nodesList)):
-            plt.scatter(x=i+1, y=pressures[i], color='red')
-        
-        for i in range(1, len(self.nodesList)):
-            plt.plot([i+1, i], [pressures[i], pressures[i-1]], color='red')
-            
-        plt.axhline(y=2500, color='blue', label='Threshold')
+        time = np.arange(0, 24, 2)
 
-        plt.xlabel("Node")
-        plt.ylabel("Pressure [Pa]")
-        plt.title(f"Time: {t}")
-        plt.show()  
+        for n in range(self.nodesList.shape[0]):
+            plt.scatter(x=time, y=pressures[n], color='red')
+
+            for i in range(1, len(time)):
+                plt.plot([time[i], time[i-1]], [pressures[n, i], pressures[n, i-1]], color='red')
+
+            plt.axhline(y=2500, color='blue')  # pressure threshold
+
+            plt.xlabel("Time")
+            plt.ylabel("Pressure [Pa]")
+            plt.title(f"Pressure-Time: Node {str(n+1)}")
+            plt.xticks(time)
+            plt.grid()
+            plt.show()       

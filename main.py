@@ -90,19 +90,22 @@ def daily(network: object, nodes: np.ndarray, params: object, daily_demand: obje
 
     daily_demand = [cell.value for cell in daily_demand['A'][1:]]
     time = np.arange(0, 24, 2)
+    daily_pressure = np.empty(shape=(len(time), len(nodes[:, 2])))
 
-    print("\nNodes with the value of 'True' have pressures < 2500 Pa.\n")
+    print("\nNodes with the value of 'False' have pressures < 2500 Pa or velosity > 8 m/s.\n")
 
     for t, demand in enumerate(daily_demand):
         network.nodesList[:, 2] = nodes[:, 2]
         network.nodesList[:, 3] = nodes[:, 3] * (demand / nodes[0, 3])
         network.edgeAttributes(init=False)
         dp = correct_pressures(network, params, None)
-        network.plot_P(network.nodesList[:, 2], time[t])
-
+        daily_pressure[t] = network.nodesList[:, 2]
+        
         print(f"\nTime {time[t]}:")
         print(network.nodesList[:, 2] > 2500)
         print(4 * network.edgesList[:, 7] / (pi * np.power(network.edgesList[:, 3], 2)) < 8)
+
+    network.plot_P(np.transpose(daily_pressure))
 
 def main():
 
