@@ -5,7 +5,7 @@ This is a project for the Applied Fluid Mechanics course in the fifth semester o
 
 In this computational problem, the low-pressure natural gas network in Figures/Figure 1 is calculated. The network covers the natural gas needs of residential buildings connected to the network nodes. In the first part of the problem, appropriate diameters for the network pipes are selected, meeting specific design requirements. Standard diameters for polyethylene pipes SDR 11 are provided in Figures/Table 1. In the second part, the variation of operating pressure at the network nodes is calculated and presented throughout the day. Values of daily flow variation are provided in Figures/Table 2. The network is solved using the Newton-Raphson method and implemented in the Python programming language. 
 
-Gas enters the network at node 1 and the total pressure of the network at node 1 is 30 mbar. The total volume flow rate of the network is 1000 m^3/h. The demand for the design volume flow rate by consumers (m3/h) is given in the Figure 1. Note that in the excel file the Q in the first node as well as all the consumptions in the other nodes (including the daily demand in the table 2) are multiplied by 5.
+Gas enters the network at node 1 and the total pressure of the network at node 1 is 30 mbar. The total volume flow rate of the network is 1000 m^3/h. The demand for the design volume flow rate by consumers (m^3/h) is given in the Figure 1. Note that in the excel file the Q in the first node as well as all the consumptions in the other nodes (including the daily demand in the table 2) are multiplied by 5.
 
 Network design requirements:
 (a) The pressure should not drop below 25.5 mbar at any point in the network.
